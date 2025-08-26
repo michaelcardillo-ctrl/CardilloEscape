@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Escape Room: The Case of the Missing Maple Syrup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <style>
+        /* This is your CSS section */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .font-patrick-hand {
+            font-family: 'Patrick Hand', cursive;
+        }
+        .message-box {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            color: white;
+            z-index: 50;
+            transition: top 0.5s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .message-box.success {
+            background-color: #28a745;
+        }
+        .message-box.error {
+            background-color: #dc3545;
+        }
+        .message-box.show {
+            top: 20px;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 sm:p-6 max-w-4xl">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="flex flex-col items-center justify-center h-screen">
+            <div class="loader mb-4"></div>
+            <p class="text-lg text-gray-600">Getting the classroom ready...</p>
+        </div>
+
+        <!-- Main Game Content -->
+        <div id="game-content" class="hidden">
+            <header class="text-center mb-6">
+                <h1 class="text-4xl md:text-5xl font-bold text-red-700 font-patrick-hand">The Case of the Missing Maple Syrup</h1>
+                <p class="text-lg text-gray-600 mt-2">A Grade 6 Math Adventure!</p>
+                <div class="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-lg text-sm">
+                    <p>Welcome, detectives! Work with your classmates to solve the math puzzles and find the missing syrup. Your Game ID is your secret code to collaborate. Share it with your team!</p>
+                    <p class="font-bold text-lg mt-2">Game ID: <span id="app-id-display" class="text-indigo-600"></span></p>
+                </div>
+            </header>
+
+            <main id="game-container" class="bg-white p-6 rounded-2xl shadow-lg">
+                <!-- Win Screen -->
+                <div id="win-screen" class="hidden text-center p-8">
+                     <img src="https://placehold.co/200x200/FFD700/000000?text=You+Did+It!" alt="Trophy" class="mx-auto mb-4 w-32 h-32" onerror="this.onerror=null;this.src='https://placehold.co/200x200/FFD700/000000?text=Success!';">
+                    <h2 class="text-3xl font-bold text-green-600 mb-4 font-patrick-hand">Congratulations!</h2>
+                    <p class="text-xl mb-2">You found the maple syrup!</p>
+                    <p class="text-gray-700">You and your team are amazing math detectives. Great job on your first day!</p>
+                    <button id="reset-game-btn" class="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">Play Again</button>
+                </div>
+
+                <!-- Puzzle Area -->
+                <div id="puzzle-area">
+                    <div class="mb-4">
+                        <div class="w-full bg-gray-200 rounded-full h-4">
+                            <div id="progress-bar" class="bg-green-500 h-4 rounded-full transition-all duration-500" style="width: 0%;"></div>
+                        </div>
+                        <p class="text-center text-sm mt-1 text-gray-500"><span id="puzzles-solved">0</span> of <span id="total-puzzles">0</span> puzzles solved</p>
+                    </div>
+
+                    <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-6">
+                        <h2 class="text-2xl font-bold mb-2 text-gray-800">Current Puzzle:</h2>
+                        <p id="puzzle-question" class="text-lg"></p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-4">
+                        <input type="text" id="answer-input" placeholder="Enter your answer here" class="flex-grow w-full sm:w-auto px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        <button id="submit-answer-btn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-md hover:shadow-lg">Submit</button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Clues and Log Section -->
+            <div class="grid md:grid-cols-2 gap-6 mt-6">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-2xl font-bold mb-3 border-b-2 pb-2 font-patrick-hand text-blue-700">Unlocked Clues</h3>
+                    <ul id="clues-list" class="space-y-2 list-disc list-inside text-gray-700">
+                        <li class="italic text-gray-500">Solve puzzles to reveal clues...</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-2xl font-bold mb-3 border-b-2 pb-2 font-patrick-hand text-purple-700">Team Log</h3>
+                    <div id="team-log" class="h-40 overflow-y-auto bg-gray-50 p-3 rounded-lg border">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Box for notifications -->
+    <div id="message-box" class="message-box"></div>
+
+    <script type="module">
+        // This is your JavaScript Section
+        
+        // Firebase Imports for database and authentication
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Get references to all the HTML elements we need to interact with ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const gameContent = document.getElementById('game-content');
+        const appIdDisplay = document.getElementById('app-id-display');
+        const puzzleQuestion = document.getElementById('puzzle-question');
+        const answerInput = document.getElementById('answer-input');
+        const submitAnswerBtn = document.getElementById('submit-answer-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const puzzlesSolved = document.getElementById('puzzles-solved');
+        const totalPuzzles = document.getElementById('total-puzzles');
+        const cluesList = document.getElementById('clues-list');
+        const teamLog = document.getElementById('team-log');
+        const winScreen = document.getElementById('win-screen');
+        const puzzleArea = document.getElementById('puzzle-area');
+        const resetGameBtn = document.getElementById('reset-game-btn');
+        const messageBox = document.getElementById('message-box');
+
+        // --- Firebase and App Configuration ---
+        // These special variables are provided by the environment to connect everyone to the same game
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-escape-room';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        
+        let app, db, auth, userId;
+        let gameStateUnsubscribe = null; // This will hold our real-time listener
+
+        // --- Game Data: All the questions, answers, and clues ---
+        const puzzles = [
+            { question: "What is the next number in the pattern? 5, 11, 17, 23, ___", answer: "29", clue: "The syrup thief likes to add 6." },
+            { question: "A rectangular garden is 8 metres long and 5 metres wide. What is its perimeter in metres?", answer: "26", clue: "The thief left a footprint 26 metres around the garden." },
+            { question: "If a pizza is cut into 8 equal slices and you eat 3/8 of it, what fraction is left? (Use format x/y)", answer: "5/8", clue: "There is 5/8 of a clue left behind." },
+            { question: "A bus leaves Toronto at 9:15 AM and arrives in Niagara Falls at 10:55 AM. How many minutes did the trip take?", answer: "100", clue: "The getaway vehicle was gone for 100 minutes." },
+            { question: "An angle is 45 degrees. What type of angle is it? (acute, obtuse, or right)", answer: "acute", clue: "The thief has an acute sense of hearing." },
+            { question: "Find the mean (average) of this set of numbers: 2, 5, 6, 7.", answer: "5", clue: "The average thief is 5 feet tall." },
+            { question: "How many centimetres are in 3.5 metres?", answer: "350", clue: "The getaway car is 350 centimetres long." },
+            { question: "A bag has 3 red marbles and 5 blue marbles. What is the probability of picking a red marble? (Use format x/y)", answer: "3/8", clue: "There's a 3/8 chance the thief went north." },
+            { question: "Calculate: 2.5 x 4", answer: "10", clue: "The thief left 10 muddy footprints." },
+            { question: "Calculate: 5.5 + 3.25", answer: "8.75", clue: "The final clue is hidden at coordinate 8.75." }
+        ];
+
+        // --- Main Functions ---
+
+        /**
+         * Initializes the Firebase app and signs the user in anonymously.
+         */
+        async function initializeFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // This function runs whenever the user's sign-in state changes
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("User authenticated with ID:", userId);
+                        await setupGame(); // Once signed in, set up the game
+                    } else {
+                        console.log("No user signed in.");
+                    }
+                });
+
+                // Sign the user in
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                loadingScreen.innerHTML = '<p class="text-red-500">Error connecting to the game. Please try again later.</p>';
+            }
+        }
+
+        /**
+         * Sets up the game. It checks if a game already exists in the database.
+         * If not, it creates a new one. Then, it listens for real-time updates.
+         */
+        async function setupGame() {
+            appIdDisplay.textContent = appId;
+            const gameDocRef = doc(db, `/artifacts/${appId}/public/data/game/state`);
+            const gameDocSnap = await getDoc(gameDocRef);
+
+            if (!gameDocSnap.exists()) {
+                await initializeGameState(gameDocRef);
+            }
+
+            // This is the magic! onSnapshot listens for any changes to the game data
+            // and automatically calls updateUI() to refresh the screen for everyone.
+            gameStateUnsubscribe = onSnapshot(gameDocRef, (doc) => {
+                const state = doc.data();
+                updateUI(state);
+            });
+
+            // Hide loading screen and show the game
+            loadingScreen.classList.add('hidden');
+            gameContent.classList.remove('hidden');
+        }
+
+        /**
+         * Creates the initial game state in the Firestore database.
+         * This is only called once for a new game.
+         */
+        async function initializeGameState(docRef) {
+            const initialPuzzles = puzzles.map(p => ({ ...p, isSolved: false }));
+            const initialState = {
+                currentPuzzleIndex: 0,
+                puzzles: initialPuzzles,
+                cluesFound: [],
+                teamLog: [`Game started by a new detective!`],
+                gameWon: false,
+            };
+            await setDoc(docRef, initialState);
+        }
+        
+        /**
+         * Updates the entire user interface based on the current game state from Firestore.
+         * This function is called whenever the data changes.
+         */
+        function updateUI(state) {
+            if (!state) return;
+
+            // Show win screen or puzzle area
+            if (state.gameWon) {
+                puzzleArea.classList.add('hidden');
+                winScreen.classList.remove('hidden');
+            } else {
+                puzzleArea.classList.remove('hidden');
+                winScreen.classList.add('hidden');
+            }
+
+            // Update the current puzzle question
+            const currentPuzzle = state.puzzles[state.currentPuzzleIndex];
+            puzzleQuestion.textContent = currentPuzzle.question;
+
+            // Update the progress bar
+            const solvedCount = state.puzzles.filter(p => p.isSolved).length;
+            const totalCount = state.puzzles.length;
+            puzzlesSolved.textContent = solvedCount;
+            totalPuzzles.textContent = totalCount;
+            const progressPercentage = totalCount > 0 ? (solvedCount / totalCount) * 100 : 0;
+            progressBar.style.width = `${progressPercentage}%`;
+
+            // Update the list of found clues
+            cluesList.innerHTML = '';
+            if (state.cluesFound.length > 0) {
+                state.cluesFound.forEach(clue => {
+                    const li = document.createElement('li');
+                    li.textContent = clue;
+                    cluesList.appendChild(li);
+                });
+            } else {
+                cluesList.innerHTML = '<li class="italic text-gray-500">Solve puzzles to reveal clues...</li>';
+            }
+
+            // Update the team log with the latest actions
+            teamLog.innerHTML = '';
+            state.teamLog.slice().reverse().forEach(entry => {
+                const p = document.createElement('p');
+                p.textContent = entry;
+                p.className = 'text-sm mb-1';
+                teamLog.appendChild(p);
+            });
+            teamLog.scrollTop = 0; // Scroll to top to see the latest message
+        }
+
+        /**
+         * Handles the logic when a user submits an answer.
+         */
+        async function handleSubmitAnswer() {
+            const userAnswer = answerInput.value.trim();
+            if (!userAnswer) {
+                showMessage('Please enter an answer.', 'error');
+                return;
+            }
+
+            const gameDocRef = doc(db, `/artifacts/${appId}/public/data/game/state`);
+            const gameDocSnap = await getDoc(gameDocRef);
+            if (!gameDocSnap.exists()) return;
+
+            const state = gameDocSnap.data();
+            const currentPuzzle = state.puzzles[state.currentPuzzleIndex];
+
+            if (userAnswer.toLowerCase() === currentPuzzle.answer.toLowerCase()) {
+                // CORRECT ANSWER
+                showMessage('Correct! You found a clue!', 'success');
+                
+                const newCluesFound = [...state.cluesFound, currentPuzzle.clue];
+                const newTeamLog = [...state.teamLog, `Detective #${userId.substring(0,4)} solved puzzle ${state.currentPuzzleIndex + 1}! Clue found.`];
+                
+                const updatedPuzzles = [...state.puzzles];
+                updatedPuzzles[state.currentPuzzleIndex].isSolved = true;
+                
+                const nextPuzzleIndex = state.currentPuzzleIndex + 1;
+                let gameIsWon = false;
+
+                // Check if it was the last puzzle
+                if (nextPuzzleIndex >= puzzles.length) {
+                    gameIsWon = true;
+                    newTeamLog.push('All puzzles solved! The maple syrup has been found!');
+                }
+
+                // Update the database with the new game state
+                await updateDoc(gameDocRef, {
+                    puzzles: updatedPuzzles,
+                    currentPuzzleIndex: gameIsWon ? state.currentPuzzleIndex : nextPuzzleIndex,
+                    cluesFound: newCluesFound,
+                    teamLog: newTeamLog,
+                    gameWon: gameIsWon
+                });
+
+            } else {
+                // INCORRECT ANSWER
+                showMessage('Not quite, try again! Work with your team.', 'error');
+                const newTeamLog = [...state.teamLog, `Detective #${userId.substring(0,4)} tried "${userAnswer}" for puzzle ${state.currentPuzzleIndex + 1}.`];
+                await updateDoc(gameDocRef, { teamLog: newTeamLog });
+            }
+
+            answerInput.value = '';
+        }
+
+        /**
+         * Resets the game to its initial state for everyone.
+         */
+        async function handleResetGame() {
+            const gameDocRef = doc(db, `/artifacts/${appId}/public/data/game/state`);
+            await initializeGameState(gameDocRef);
+        }
+        
+        /**
+         * Displays a temporary message to the user (e.g., "Correct!" or "Try again!").
+         */
+        function showMessage(message, type = 'success') {
+            messageBox.textContent = message;
+            messageBox.className = `message-box ${type}`;
+            messageBox.classList.add('show');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000);
+        }
+
+        // --- Event Listeners ---
+        // These connect the buttons and input fields to our JavaScript functions
+        submitAnswerBtn.addEventListener('click', handleSubmitAnswer);
+        answerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSubmitAnswer();
+            }
+        });
+        resetGameBtn.addEventListener('click', handleResetGame);
+
+        // --- Start the App ---
+        // This is the first function that runs when the page loads
+        window.onload = initializeFirebase;
+
+    </script>
+</body>
+</html>
